@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
-import { Camera, Square, RefreshCw } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Camera, Square, RefreshCw, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { PortabilityFormData } from '../index'
+
+const MAX_RECORDING_SECONDS = 15
 
 export default function Step5({
   data,
@@ -19,20 +22,45 @@ export default function Step5({
   const [videoURL, setVideoURL] = useState<string | null>(
     data.video_auth_file ? URL.createObjectURL(data.video_auth_file) : null,
   )
+  const [error, setError] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop()
+      setStatus('recorded')
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (status === 'recording' && timer >= MAX_RECORDING_SECONDS) {
+      stopRecording()
+    }
+  }, [timer, status, stopRecording])
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
+      if (videoRef.current?.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream
+        stream.getTracks().forEach((track) => track.stop())
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
       if (videoURL) URL.revokeObjectURL(videoURL)
     }
   }, [videoURL])
 
   const startRecording = async () => {
+    setError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user' },
@@ -91,17 +119,10 @@ export default function Step5({
       timerRef.current = setInterval(() => setTimer((t) => t + 1), 1000)
     } catch (err) {
       console.error('MediaRecorder error:', err)
-      alert(
+      setError(
         'Não foi possível iniciar a gravação. Verifique as permissões de câmera e microfone no seu navegador.',
       )
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && status === 'recording') {
-      mediaRecorderRef.current.stop()
-      setStatus('recorded')
-      if (timerRef.current) clearInterval(timerRef.current)
+      setStatus('idle')
     }
   }
 
@@ -109,13 +130,28 @@ export default function Step5({
     setStatus('idle')
     if (videoURL) URL.revokeObjectURL(videoURL)
     setVideoURL(null)
+    setError(null)
+    setTimer(0)
     update({ video_auth_file: null })
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream
+      stream.getTracks().forEach((track) => track.stop())
+      videoRef.current.srcObject = null
+    }
   }
 
   const formatTime = (s: number) => `00:${s.toString().padStart(2, '0')}`
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {error && (
+        <Alert variant="destructive" className="animate-fade-in-down">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permissão Necessária</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-md text-sm">
         <p className="font-semibold mb-2">Instruções para Gravação:</p>
         <p>1. Posicione seu rosto no centro da câmera.</p>
@@ -163,7 +199,9 @@ export default function Step5({
           <div className="absolute top-4 left-0 right-0 flex justify-center z-10">
             <div className="flex items-center bg-black/50 text-white px-3 py-1 rounded-full backdrop-blur shadow-lg">
               <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse mr-2" />
-              <span className="font-mono">{formatTime(timer)}</span>
+              <span className="font-mono">
+                {formatTime(timer)} / {formatTime(MAX_RECORDING_SECONDS)}
+              </span>
             </div>
           </div>
         )}
@@ -173,6 +211,7 @@ export default function Step5({
             src={videoURL}
             controls
             playsInline
+            controlsList="nodownload"
             className="absolute inset-0 w-full h-full object-contain bg-black"
           />
         )}
