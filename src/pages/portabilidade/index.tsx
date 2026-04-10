@@ -15,26 +15,28 @@ import Step5 from './components/Step5'
 
 export interface PortabilityFormData {
   invoice_file: File | null
-  titular_name: string
-  titular_document: string
-  document_file: File | null
   state: string
   city: string
   origin_operator: string
   numbers: string
+  titular_name: string
+  titular_document: string
+  document_file: File | null
   video_auth_file: File | null
+  invoice_up_to_date: boolean
 }
 
 const INITIAL_DATA: PortabilityFormData = {
   invoice_file: null,
-  titular_name: '',
-  titular_document: '',
-  document_file: null,
   state: '',
   city: '',
   origin_operator: '',
   numbers: '',
+  titular_name: '',
+  titular_document: '',
+  document_file: null,
   video_auth_file: null,
+  invoice_up_to_date: false,
 }
 
 export default function PortabilidadePage() {
@@ -53,11 +55,11 @@ export default function PortabilidadePage() {
 
   const canProceed = () => {
     if (step === 1) return !!formData.invoice_file
-    if (step === 2)
-      return !!formData.titular_name && !!formData.titular_document && !!formData.document_file
-    if (step === 3) return !!formData.state && !!formData.city && !!formData.origin_operator
-    if (step === 4) return !!formData.numbers.trim()
-    if (step === 5) return !!formData.video_auth_file
+    if (step === 2) return !!formData.state && !!formData.city && !!formData.origin_operator
+    if (step === 3)
+      return !!formData.numbers.trim() && !!formData.titular_name && !!formData.titular_document
+    if (step === 4) return !!formData.document_file
+    if (step === 5) return !!formData.video_auth_file && formData.invoice_up_to_date
     return true
   }
 
@@ -112,10 +114,10 @@ export default function PortabilidadePage() {
         <CardHeader className="bg-slate-50/50 border-b pb-6">
           <CardTitle className="text-xl">
             {step === 1 && 'Passo 1: Fatura Atual'}
-            {step === 2 && 'Passo 2: Titularidade'}
-            {step === 3 && 'Passo 3: Localidade'}
-            {step === 4 && 'Passo 4: Números'}
-            {step === 5 && 'Passo 5: Autorização'}
+            {step === 2 && 'Passo 2: Localidade e Operadora'}
+            {step === 3 && 'Passo 3: Dados da Portabilidade'}
+            {step === 4 && 'Passo 4: Documento de Identificação'}
+            {step === 5 && 'Passo 5: Autorização em Vídeo'}
           </CardTitle>
           <CardDescription>Siga os passos corretamente.</CardDescription>
         </CardHeader>

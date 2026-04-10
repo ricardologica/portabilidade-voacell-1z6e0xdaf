@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import useAppStore from '@/stores/useAppStore'
 import pb from '@/lib/pocketbase/client'
+import { useNavigate } from 'react-router-dom'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -13,11 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Phone, Receipt, Clock, Download, Clock3 } from 'lucide-react'
+import { Phone, Receipt, Clock, Download, Clock3, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function ClienteDashboard() {
   const { user } = useAppStore()
+  const navigate = useNavigate()
   const [requests, setRequests] = useState<any[]>([])
   const [invoices, setInvoices] = useState<any[]>([])
   const [calls] = useState<any[]>([
@@ -78,6 +80,19 @@ export default function ClienteDashboard() {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-secondary">Meu Painel</h2>
+          <p className="text-muted-foreground text-sm">Acompanhe suas solicitações e faturas.</p>
+        </div>
+        <Button
+          onClick={() => navigate('/portabilidade')}
+          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Nova Portabilidade
+        </Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-none shadow-sm shadow-black/5">
           <CardHeader className="flex flex-row items-center justify-between pb-2">

@@ -8,6 +8,7 @@ import PublicLayout from './components/PublicLayout'
 import DashboardLayout from './components/DashboardLayout'
 import Index from './pages/Index'
 import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
 import PortabilidadePage from './pages/portabilidade/index'
 import ClienteDashboard from './pages/dashboard/Cliente'
 import AdminDashboard from './pages/dashboard/Admin'
@@ -31,6 +32,7 @@ const AppRoutes = () => (
     <Route element={<PublicLayout />}>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
       <Route
         path="/portabilidade"
         element={

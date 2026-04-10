@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Camera, Square, Play, RefreshCw } from 'lucide-react'
+import { Camera, Square, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { PortabilityFormData } from '../index'
 
 export default function Step5({
@@ -44,7 +46,7 @@ export default function Step5({
 
       chunksRef.current = []
 
-      const types = ['video/webm;codecs=vp9,opus', 'video/webm', 'video/mp4']
+      const types = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
       let options = {}
       for (const t of types) {
         if (MediaRecorder.isTypeSupported(t)) {
@@ -61,13 +63,22 @@ export default function Step5({
       }
 
       mediaRecorder.onstop = () => {
-        const mimeType = mediaRecorder.mimeType || 'video/mp4'
-        const blob = new Blob(chunksRef.current, { type: mimeType })
+        const rawMimeType = mediaRecorder.mimeType || 'video/mp4'
+        const baseMimeType = rawMimeType.split(';')[0]
+
+        const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska']
+        const finalMime = allowedMimes.includes(baseMimeType) ? baseMimeType : 'video/mp4'
+
+        let ext = 'mp4'
+        if (finalMime === 'video/webm') ext = 'webm'
+        else if (finalMime === 'video/quicktime') ext = 'mov'
+        else if (finalMime === 'video/x-matroska') ext = 'mkv'
+
+        const blob = new Blob(chunksRef.current, { type: finalMime })
         const url = URL.createObjectURL(blob)
         setVideoURL(url)
 
-        const ext = mimeType.includes('webm') ? 'webm' : 'mp4'
-        const file = new File([blob], `video_auth_${Date.now()}.${ext}`, { type: mimeType })
+        const file = new File([blob], `video_auth_${Date.now()}.${ext}`, { type: finalMime })
         update({ video_auth_file: file })
 
         stream.getTracks().forEach((track) => track.stop())
@@ -116,13 +127,13 @@ export default function Step5({
         <p className="text-lg font-medium text-secondary">
           "Meu nome é{' '}
           <span className="underline decoration-primary decoration-2 underline-offset-2">
-            {data.titular_name || '[Seu Nome]'}
+            {data.titular_name || '[Nome do Titular]'}
           </span>{' '}
           e autorizo minha portabilidade da Operadora{' '}
           <span className="underline decoration-primary decoration-2 underline-offset-2">
-            {data.origin_operator || '[Origem]'}
+            {data.origin_operator || '[Operadora de Origem]'}
           </span>{' '}
-          para a Operadora Voacell com o documento na mão."
+          para a Operadora Voacell com posse do documento na mão."
         </p>
       </div>
 
@@ -192,6 +203,21 @@ export default function Step5({
             <RefreshCw className="mr-2 h-5 w-5" /> Gravar Novamente
           </Button>
         )}
+      </div>
+
+      <div className="pt-4 border-t mt-6 flex items-start space-x-3 p-4 bg-slate-50 border rounded-lg">
+        <Checkbox
+          id="invoice_up_to_date"
+          checked={data.invoice_up_to_date}
+          onCheckedChange={(checked) => update({ invoice_up_to_date: checked === true })}
+          className="mt-1"
+        />
+        <Label
+          htmlFor="invoice_up_to_date"
+          className="text-sm font-medium leading-relaxed peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+        >
+          Declaro que a fatura está em dia para evitar bloqueios no procedimento. *
+        </Label>
       </div>
     </div>
   )

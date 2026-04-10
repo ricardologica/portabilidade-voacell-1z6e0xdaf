@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,6 +64,12 @@ export default function Login() {
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
+          <div className="mt-6 text-center text-sm text-muted-foreground">
+            Não tem uma conta?{' '}
+            <Link to="/signup" className="text-primary hover:underline font-medium">
+              Criar conta
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
