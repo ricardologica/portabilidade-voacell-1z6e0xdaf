@@ -1,44 +1,69 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import useAppStore from '@/stores/useAppStore'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
-import { User, ShieldAlert } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/hooks/use-toast'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 export default function Login() {
-  const { login } = useAppStore()
+  const [email, setEmail] = useState('cliente@voacell.com')
+  const [password, setPassword] = useState('Skip@Pass')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { toast } = useToast()
 
-  const handleLogin = (role: 'client' | 'admin') => {
-    login(role)
-    navigate(role === 'admin' ? '/admin' : '/cliente')
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await pb.collection('users').authWithPassword(email, password)
+      toast({ title: 'Bem-vindo!' })
+      if (pb.authStore.record?.role === 'admin') navigate('/admin')
+      else navigate('/cliente')
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao entrar',
+        description: 'Credenciais inválidas.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-[calc(100vh-16rem)] flex items-center justify-center px-4 py-12 animate-fade-in">
-      <Card className="w-full max-w-md shadow-xl border-t-4 border-t-primary">
-        <CardHeader className="text-center pb-2">
-          <CardTitle className="text-2xl font-bold text-secondary">Acesso ao Sistema</CardTitle>
-          <CardDescription>
-            Selecione seu perfil para entrar (Ambiente de Demonstração)
-          </CardDescription>
+    <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-120px)] p-4">
+      <Card className="w-full max-w-md border-none shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl">Entrar</CardTitle>
+          <CardDescription>Acesse sua conta Voacell</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <Button
-            variant="outline"
-            className="w-full h-14 text-lg justify-start px-6 gap-4 hover:bg-slate-50"
-            onClick={() => handleLogin('client')}
-          >
-            <User className="h-6 w-6 text-primary" />
-            Entrar como Cliente
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full h-14 text-lg justify-start px-6 gap-4 hover:bg-slate-50"
-            onClick={() => handleLogin('admin')}
-          >
-            <ShieldAlert className="h-6 w-6 text-secondary" />
-            Entrar como Administrador
-          </Button>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha</Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import useAppStore from '@/stores/useAppStore'
+import { useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -18,35 +19,63 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { Eye, FileText, Play, CheckCircle, XCircle } from 'lucide-react'
+import { Eye, FileText, CheckCircle, XCircle, Search } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { PortabilityRequest } from '@/types'
 
 export default function AdminDashboard() {
-  const { requests, updateRequestStatus } = useAppStore()
-  const [selectedReq, setSelectedReq] = useState<PortabilityRequest | null>(null)
+  const [requests, setRequests] = useState<any[]>([])
+  const [selectedReq, setSelectedReq] = useState<any | null>(null)
   const { toast } = useToast()
 
-  const handleAction = (status: 'completed' | 'rejected') => {
+  const loadData = async () => {
+    try {
+      const reqs = await pb
+        .collection('portability_requests')
+        .getFullList({ sort: '-created', expand: 'user_id' })
+      setRequests(reqs)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+  useRealtime('portability_requests', loadData)
+
+  const handleAction = async (status: string) => {
     if (selectedReq) {
-      updateRequestStatus(selectedReq.id, status)
-      toast({
-        title: 'Status Atualizado',
-        description: `A solicitação foi marcada como ${status === 'completed' ? 'Aprovada' : 'Rejeitada'}.`,
-        variant: status === 'rejected' ? 'destructive' : 'default',
-      })
-      setSelectedReq(null)
+      try {
+        await pb.collection('portability_requests').update(selectedReq.id, { status })
+        toast({
+          title: 'Status Atualizado',
+          description: `A solicitação foi marcada como ${status}.`,
+        })
+        setSelectedReq(null)
+      } catch (err) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível atualizar o status.',
+          variant: 'destructive',
+        })
+      }
     }
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'approved':
         return <Badge className="bg-green-500">Aprovada</Badge>
       case 'pending':
         return (
-          <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
             Pendente
+          </Badge>
+        )
+      case 'analyzing':
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            Analisando
           </Badge>
         )
       case 'rejected':
@@ -77,19 +106,17 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-500">
-              {requests.filter((r) => r.status === 'pending').length}
+              {requests.filter((r) => r.status === 'pending' || r.status === 'analyzing').length}
             </div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Aprovadas Hoje
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Aprovadas</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {requests.filter((r) => r.status === 'completed').length}
+              {requests.filter((r) => r.status === 'approved').length}
             </div>
           </CardContent>
         </Card>
@@ -104,7 +131,7 @@ export default function AdminDashboard() {
             <TableHeader className="bg-slate-50">
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Cliente / CNPJ</TableHead>
+                <TableHead>Cliente / Doc</TableHead>
                 <TableHead>Operadora Origem</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
@@ -116,16 +143,16 @@ export default function AdminDashboard() {
                 <TableRow key={req.id}>
                   <TableCell className="font-medium text-secondary">{req.id}</TableCell>
                   <TableCell>
-                    <div className="font-medium">{req.ownerName}</div>
-                    <div className="text-xs text-muted-foreground">{req.document}</div>
+                    <div className="font-medium">{req.titular_name}</div>
+                    <div className="text-xs text-muted-foreground">{req.titular_document}</div>
                   </TableCell>
                   <TableCell>
-                    {req.currentOperator === 'Outra' ? req.operatorOther : req.currentOperator}
+                    {req.origin_operator}
                     <div className="text-xs text-muted-foreground">
                       {req.city} - {req.state}
                     </div>
                   </TableCell>
-                  <TableCell>{new Date(req.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>{new Date(req.created).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{getStatusBadge(req.status)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setSelectedReq(req)}>
@@ -134,6 +161,13 @@ export default function AdminDashboard() {
                   </TableCell>
                 </TableRow>
               ))}
+              {requests.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-4">
+                    Nenhuma solicitação encontrada.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -145,7 +179,7 @@ export default function AdminDashboard() {
             <>
               <SheetHeader className="mb-6">
                 <SheetTitle className="text-xl text-secondary">
-                  Análise de Solicitação: {selectedReq.id}
+                  Análise: {selectedReq.id}
                 </SheetTitle>
                 <SheetDescription>
                   Verifique os dados e documentos antes de aprovar.
@@ -153,86 +187,93 @@ export default function AdminDashboard() {
               </SheetHeader>
 
               <div className="space-y-6">
-                {/* Data Section */}
                 <div className="space-y-3">
                   <h3 className="font-semibold border-b pb-2">Dados do Cliente</h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground block">Proprietário</span>
-                      {selectedReq.ownerName}
+                      {selectedReq.titular_name}
                     </div>
                     <div>
                       <span className="text-muted-foreground block">Documento</span>
-                      {selectedReq.document}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Email</span>
-                      {selectedReq.email}
+                      {selectedReq.titular_document}
                     </div>
                     <div>
                       <span className="text-muted-foreground block">Operadora Atual</span>
-                      {selectedReq.currentOperator === 'Outra'
-                        ? selectedReq.operatorOther
-                        : selectedReq.currentOperator}
+                      {selectedReq.origin_operator}
                     </div>
                     <div>
                       <span className="text-muted-foreground block">Localidade</span>
                       {selectedReq.city} - {selectedReq.state}
                     </div>
                     <div className="col-span-2">
-                      <span className="text-muted-foreground block mb-1">
-                        Números a Portar ({selectedReq.numbers.length})
-                      </span>
-                      <div className="bg-slate-50 p-2 rounded border font-mono text-xs max-h-24 overflow-y-auto">
-                        {selectedReq.numbers.join(', ')}
+                      <span className="text-muted-foreground block mb-1">Números a Portar</span>
+                      <div className="bg-slate-50 p-2 rounded border font-mono text-xs max-h-24 overflow-y-auto whitespace-pre-wrap">
+                        {selectedReq.numbers}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Documents Section */}
                 <div className="space-y-3">
                   <h3 className="font-semibold border-b pb-2">Documentação Anexada</h3>
                   <div className="flex gap-2 flex-wrap">
-                    <Button variant="outline" size="sm" className="bg-slate-50">
-                      <FileText className="h-4 w-4 mr-2 text-blue-500" /> Termo_Assinado.pdf
-                    </Button>
-                    <Button variant="outline" size="sm" className="bg-slate-50">
-                      <FileText className="h-4 w-4 mr-2 text-blue-500" /> Fatura_Vivo.pdf
-                    </Button>
-                    <Button variant="outline" size="sm" className="bg-slate-50">
-                      <FileText className="h-4 w-4 mr-2 text-blue-500" /> CNH_Titular.pdf
-                    </Button>
+                    {selectedReq.invoice_file && (
+                      <a
+                        href={pb.files.getUrl(selectedReq, selectedReq.invoice_file)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Button variant="outline" size="sm" className="bg-slate-50">
+                          <FileText className="h-4 w-4 mr-2 text-blue-500" /> Fatura Origem
+                        </Button>
+                      </a>
+                    )}
+                    {selectedReq.document_file && (
+                      <a
+                        href={pb.files.getUrl(selectedReq, selectedReq.document_file)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Button variant="outline" size="sm" className="bg-slate-50">
+                          <FileText className="h-4 w-4 mr-2 text-blue-500" /> Doc Titular
+                        </Button>
+                      </a>
+                    )}
                   </div>
                 </div>
 
-                {/* Video Section */}
                 <div className="space-y-3">
                   <h3 className="font-semibold border-b pb-2">Validação por Vídeo</h3>
-                  <div className="aspect-video bg-black rounded-lg relative flex items-center justify-center border group">
-                    <img
-                      src="https://img.usecurling.com/ppl/large?gender=male"
-                      alt="Thumb"
-                      className="w-full h-full object-cover opacity-60"
-                    />
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="absolute rounded-full h-12 w-12 bg-white/20 backdrop-blur hover:bg-white/40 text-white"
-                    >
-                      <Play className="h-6 w-6 ml-1" />
-                    </Button>
-                  </div>
+                  {selectedReq.video_auth_file ? (
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden border">
+                      <video
+                        controls
+                        src={pb.files.getUrl(selectedReq, selectedReq.video_auth_file)}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-slate-50 text-center text-sm text-muted-foreground border rounded-lg">
+                      Nenhum vídeo anexado.
+                    </div>
+                  )}
                 </div>
 
-                {/* Actions */}
-                {selectedReq.status === 'pending' && (
+                {['pending', 'analyzing'].includes(selectedReq.status) && (
                   <div className="pt-6 border-t flex gap-3">
                     <Button
                       className="flex-1 bg-primary hover:bg-primary/90 text-white"
-                      onClick={() => handleAction('completed')}
+                      onClick={() => handleAction('approved')}
                     >
                       <CheckCircle className="mr-2 h-5 w-5" /> Aprovar
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      onClick={() => handleAction('analyzing')}
+                    >
+                      <Search className="mr-2 h-5 w-5" /> Analisar
                     </Button>
                     <Button
                       className="flex-1"

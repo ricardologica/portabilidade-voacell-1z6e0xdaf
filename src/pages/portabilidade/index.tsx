@@ -5,52 +5,96 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/hooks/use-toast'
+import pb from '@/lib/pocketbase/client'
+
 import Step1 from './components/Step1'
 import Step2 from './components/Step2'
 import Step3 from './components/Step3'
 import Step4 from './components/Step4'
 import Step5 from './components/Step5'
-import { PortabilityRequest } from '@/types'
 
-export type FormData = Omit<PortabilityRequest, 'id' | 'createdAt' | 'status'>
+export interface PortabilityFormData {
+  invoice_file: File | null
+  titular_name: string
+  titular_document: string
+  document_file: File | null
+  state: string
+  city: string
+  origin_operator: string
+  numbers: string
+  video_auth_file: File | null
+}
 
-const INITIAL_DATA: FormData = {
-  ownerName: '',
-  document: '',
-  email: '',
-  currentOperator: '',
-  operatorOther: '',
+const INITIAL_DATA: PortabilityFormData = {
+  invoice_file: null,
+  titular_name: '',
+  titular_document: '',
+  document_file: null,
   state: '',
   city: '',
-  numbers: [],
-  documentsUploaded: false,
-  videoAuthorized: false,
+  origin_operator: '',
+  numbers: '',
+  video_auth_file: null,
 }
 
 export default function PortabilidadePage() {
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState<FormData>(INITIAL_DATA)
+  const [formData, setFormData] = useState<PortabilityFormData>(INITIAL_DATA)
   const [loading, setLoading] = useState(false)
-  const { addRequest } = useAppStore()
+  const { user } = useAppStore()
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const updateData = (fields: Partial<FormData>) => setFormData((prev) => ({ ...prev, ...fields }))
+  const updateData = (fields: Partial<PortabilityFormData>) =>
+    setFormData((prev) => ({ ...prev, ...fields }))
 
   const handleNext = () => setStep((s) => Math.min(s + 1, 5))
   const handleBack = () => setStep((s) => Math.max(s - 1, 1))
 
+  const canProceed = () => {
+    if (step === 1) return !!formData.invoice_file
+    if (step === 2)
+      return !!formData.titular_name && !!formData.titular_document && !!formData.document_file
+    if (step === 3) return !!formData.state && !!formData.city && !!formData.origin_operator
+    if (step === 4) return !!formData.numbers.trim()
+    if (step === 5) return !!formData.video_auth_file
+    return true
+  }
+
   const handleSubmit = async () => {
+    if (!user) return
     setLoading(true)
-    // Simulate API call
-    await new Promise((r) => setTimeout(r, 1500))
-    addRequest(formData)
-    setLoading(false)
-    toast({
-      title: 'Solicitação Enviada!',
-      description: 'Sua portabilidade foi registrada com sucesso.',
-    })
-    navigate('/')
+    try {
+      const data = new FormData()
+      data.append('user_id', user.id)
+      data.append('state', formData.state)
+      data.append('city', formData.city)
+      data.append('origin_operator', formData.origin_operator)
+      data.append('numbers', formData.numbers)
+      data.append('titular_name', formData.titular_name)
+      data.append('titular_document', formData.titular_document)
+      data.append('status', 'pending')
+
+      if (formData.invoice_file) data.append('invoice_file', formData.invoice_file)
+      if (formData.document_file) data.append('document_file', formData.document_file)
+      if (formData.video_auth_file) data.append('video_auth_file', formData.video_auth_file)
+
+      await pb.collection('portability_requests').create(data)
+
+      toast({
+        title: 'Solicitação Enviada!',
+        description: 'Sua portabilidade foi registrada com sucesso.',
+      })
+      navigate('/cliente')
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: err.message || 'Falha ao enviar solicitação.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const progress = (step / 5) * 100
@@ -67,19 +111,14 @@ export default function PortabilidadePage() {
       <Card className="shadow-lg border-none ring-1 ring-black/5">
         <CardHeader className="bg-slate-50/50 border-b pb-6">
           <CardTitle className="text-xl">
-            {step === 1 && 'Passo 1: Identificação'}
-            {step === 2 && 'Passo 2: Detalhes da Linha'}
-            {step === 3 && 'Passo 3: Documentação'}
-            {step === 4 && 'Passo 4: Autorização por Vídeo'}
-            {step === 5 && 'Passo 5: Termos e Consentimento'}
+            {step === 1 && 'Passo 1: Fatura Atual'}
+            {step === 2 && 'Passo 2: Titularidade'}
+            {step === 3 && 'Passo 3: Localidade'}
+            {step === 4 && 'Passo 4: Números'}
+            {step === 5 && 'Passo 5: Autorização'}
           </CardTitle>
-          <CardDescription>
-            {step === 4
-              ? 'Etapa obrigatória para prevenção de fraudes.'
-              : 'Todos os campos marcados com * são obrigatórios.'}
-          </CardDescription>
+          <CardDescription>Siga os passos corretamente.</CardDescription>
         </CardHeader>
-
         <CardContent className="p-6 sm:p-8">
           {step === 1 && <Step1 data={formData} update={updateData} />}
           {step === 2 && <Step2 data={formData} update={updateData} />}
@@ -91,10 +130,10 @@ export default function PortabilidadePage() {
             <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
               Voltar
             </Button>
-
             {step < 5 ? (
               <Button
                 onClick={handleNext}
+                disabled={!canProceed()}
                 className="bg-primary hover:bg-primary/90 text-white min-w-[120px]"
               >
                 Próximo Passo
@@ -102,10 +141,10 @@ export default function PortabilidadePage() {
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={loading || !formData.videoAuthorized || !formData.documentsUploaded}
+                disabled={loading || !canProceed()}
                 className="bg-secondary hover:bg-secondary/90 text-white min-w-[120px]"
               >
-                {loading ? 'Enviando...' : 'Concluir Solicitação'}
+                {loading ? 'Enviando...' : 'Concluir'}
               </Button>
             )}
           </div>

@@ -1,134 +1,62 @@
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { FormData } from '../index'
-
-const STATES = ['SP', 'RJ', 'MG', 'PR', 'SC', 'RS', 'BA', 'PE', 'CE', 'DF']
-const CITIES: Record<string, string[]> = {
-  SP: ['São Paulo', 'Campinas', 'Santos', 'Ribeirão Preto'],
-  RJ: ['Rio de Janeiro', 'Niterói', 'Macaé', 'Petrópolis'],
-  MG: ['Belo Horizonte', 'Uberlândia', 'Juiz de Fora', 'Ouro Preto'],
-  PR: ['Curitiba', 'Londrina', 'Maringá'],
-  SC: ['Florianópolis', 'Joinville', 'Blumenau'],
-  RS: ['Porto Alegre', 'Caxias do Sul', 'Pelotas'],
-  BA: ['Salvador', 'Feira de Santana', 'Vitória da Conquista'],
-  PE: ['Recife', 'Jaboatão dos Guararapes', 'Olinda'],
-  CE: ['Fortaleza', 'Caucaia', 'Juazeiro do Norte'],
-  DF: ['Brasília'],
-}
+import { Label } from '@/components/ui/label'
+import { FileUp } from 'lucide-react'
+import { PortabilityFormData } from '../index'
 
 export default function Step2({
   data,
   update,
 }: {
-  data: FormData
-  update: (d: Partial<FormData>) => void
+  data: PortabilityFormData
+  update: (d: Partial<PortabilityFormData>) => void
 }) {
-  const citiesForState = data.state ? CITIES[data.state] || [] : []
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      update({ document_file: e.target.files[0] })
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <Label>Operadora Atual (Origem) *</Label>
-          <Select
-            value={data.currentOperator}
-            onValueChange={(v) => {
-              update({ currentOperator: v })
-              if (v !== 'Outra') update({ operatorOther: '' })
-            }}
-          >
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Selecione a operadora" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Vivo">Vivo</SelectItem>
-              <SelectItem value="Claro">Claro</SelectItem>
-              <SelectItem value="TIM">TIM</SelectItem>
-              <SelectItem value="Oi">Oi</SelectItem>
-              <SelectItem value="Algar">Algar Telecom</SelectItem>
-              <SelectItem value="Outra">Outra</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {data.currentOperator === 'Outra' && (
-          <div className="space-y-2">
-            <Label>Qual operadora? *</Label>
-            <Input
-              className="h-12"
-              placeholder="Digite o nome da operadora"
-              value={data.operatorOther || ''}
-              onChange={(e) => update({ operatorOther: e.target.value })}
-            />
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label>Estado (UF) *</Label>
-          <Select value={data.state} onValueChange={(v) => update({ state: v, city: '' })}>
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Selecione o Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATES.map((uf) => (
-                <SelectItem key={uf} value={uf}>
-                  {uf}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Cidade *</Label>
-          <Select
-            value={data.city}
-            onValueChange={(v) => update({ city: v })}
-            disabled={!data.state}
-          >
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Selecione a Cidade" />
-            </SelectTrigger>
-            <SelectContent>
-              {citiesForState.map((city) => (
-                <SelectItem key={city} value={city}>
-                  {city}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-md text-sm">
-        <p className="font-semibold">Atenção:</p>
-        <p>
-          Inclua apenas números da mesma localidade em um pedido de portabilidade. Se desejar
-          solicitar portabilidade de números de localidades diferentes, faça mais de um pedido.
-        </p>
+      <div className="space-y-2">
+        <Label htmlFor="titular_name">Nome do Titular (Conforme Fatura) *</Label>
+        <Input
+          id="titular_name"
+          placeholder="Ex: Empresa Tech Mundo Telecom"
+          value={data.titular_name}
+          onChange={(e) => update({ titular_name: e.target.value })}
+          className="h-12 text-base"
+        />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="numbers">Números Portados *</Label>
-        <Textarea
-          id="numbers"
-          placeholder="Ex: 1921399887&#10;19999999999"
-          className="min-h-[120px] font-mono text-base resize-none"
-          value={data.numbers.join('\n')}
-          onChange={(e) => update({ numbers: e.target.value.split('\n') })}
+        <Label htmlFor="titular_document">CNPJ / CPF do Titular *</Label>
+        <Input
+          id="titular_document"
+          placeholder="Apenas números"
+          value={data.titular_document}
+          onChange={(e) => update({ titular_document: e.target.value })}
+          className="h-12 text-base"
         />
-        <p className="text-xs text-muted-foreground">
-          Insira um número por linha, contendo o DDD (Código Nacional) e o número local (ex:
-          1921399887).
-        </p>
+      </div>
+
+      <div className="space-y-2 pt-4 border-t">
+        <Label>Documento de Identificação (RG/CNH ou Contrato Social) *</Label>
+        <div className="border border-dashed border-slate-300 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 hover:bg-slate-100 transition-colors">
+          <div className="text-sm font-medium truncate max-w-full">
+            {data.document_file ? data.document_file.name : 'Nenhum documento selecionado'}
+          </div>
+          <label className="cursor-pointer bg-white border shadow-sm px-4 py-2 rounded-md text-sm hover:bg-slate-50 flex items-center shrink-0">
+            <FileUp className="h-4 w-4 mr-2" />
+            Anexar PDF
+            <input
+              type="file"
+              className="hidden"
+              accept=".pdf,application/pdf"
+              onChange={handleFileChange}
+            />
+          </label>
+        </div>
       </div>
     </div>
   )

@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
 import useAppStore from '@/stores/useAppStore'
+import pb from '@/lib/pocketbase/client'
+import { useRealtime } from '@/hooks/use-realtime'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -10,28 +13,68 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Phone, Receipt, Clock, Download, CheckCircle2, Clock3 } from 'lucide-react'
+import { Phone, Receipt, Clock, Download, Clock3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function ClienteDashboard() {
-  const { requests, invoices, calls } = useAppStore()
+  const { user } = useAppStore()
+  const [requests, setRequests] = useState<any[]>([])
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [calls] = useState<any[]>([
+    { id: '1', date: '2026-04-09 14:30', destination: '11 97777-3333', duration: '05:23' },
+    { id: '2', date: '2026-04-08 09:15', destination: '21 96666-4444', duration: '12:05' },
+  ])
+
+  const loadData = async () => {
+    if (!user) return
+    try {
+      const reqs = await pb
+        .collection('portability_requests')
+        .getFullList({ filter: `user_id = "${user.id}"`, sort: '-created' })
+      setRequests(reqs)
+      const invs = await pb
+        .collection('billing')
+        .getFullList({ filter: `user_id = "${user.id}"`, sort: '-due_date' })
+      setInvoices(invs)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [user])
+  useRealtime('portability_requests', loadData)
+  useRealtime('billing', loadData)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500">Concluído</Badge>
+      case 'approved':
+        return <Badge className="bg-green-500">Aprovado</Badge>
       case 'pending':
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+            Pendente
+          </Badge>
+        )
+      case 'analyzing':
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
             Em Análise
           </Badge>
         )
       case 'rejected':
         return <Badge variant="destructive">Rejeitado</Badge>
       default:
-        return <Badge variant="outline">Processando</Badge>
+        return <Badge variant="outline">{status}</Badge>
     }
   }
+
+  const activeLines = requests.filter((r) => r.status === 'approved').length
+  const pendingReqs = requests.filter(
+    (r) => r.status !== 'approved' && r.status !== 'rejected',
+  ).length
+  const lastInvoice = invoices[0]
 
   return (
     <div className="space-y-6">
@@ -44,8 +87,8 @@ export default function ClienteDashboard() {
             <Phone className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary">0</div>
-            <p className="text-xs text-muted-foreground mt-1">Aguardando portabilidade</p>
+            <div className="text-2xl font-bold text-secondary">{activeLines}</div>
+            <p className="text-xs text-muted-foreground mt-1">Em sua conta</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm shadow-black/5">
@@ -56,10 +99,14 @@ export default function ClienteDashboard() {
             <Receipt className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary">R$ 450,00</div>
-            <p className="text-xs text-muted-foreground mt-1 text-red-500 flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Vence em 5 dias
-            </p>
+            <div className="text-2xl font-bold text-secondary">
+              R$ {lastInvoice ? lastInvoice.amount.toFixed(2).replace('.', ',') : '0,00'}
+            </div>
+            {lastInvoice && lastInvoice.status === 'pending' && (
+              <p className="text-xs text-muted-foreground mt-1 text-red-500 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Vence em breve
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm shadow-black/5">
@@ -70,7 +117,7 @@ export default function ClienteDashboard() {
             <Clock3 className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary">{requests.length}</div>
+            <div className="text-2xl font-bold text-secondary">{pendingReqs}</div>
             <p className="text-xs text-muted-foreground mt-1">Em andamento</p>
           </CardContent>
         </Card>
@@ -104,41 +151,34 @@ export default function ClienteDashboard() {
               {requests.length === 0 ? (
                 <p className="text-muted-foreground text-sm">Nenhuma solicitação encontrada.</p>
               ) : (
-                <div className="space-y-8">
-                  {requests.map((req) => (
-                    <div
-                      key={req.id}
-                      className="flex flex-col sm:flex-row justify-between gap-4 p-4 rounded-lg border bg-slate-50/50"
-                    >
-                      <div>
-                        <h4 className="font-semibold">
-                          {req.id} - {req.numbers.length}{' '}
-                          {req.numbers.length === 1 ? 'número' : 'números'}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          De:{' '}
-                          {req.currentOperator === 'Outra'
-                            ? req.operatorOther
-                            : req.currentOperator}{' '}
-                          | Para: Voacell
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Localidade: {req.city} - {req.state}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Criado em: {new Date(req.createdAt).toLocaleDateString('pt-BR')}
-                        </p>
+                <div className="space-y-4">
+                  {requests.map((req) => {
+                    const numbersList = req.numbers.split('\n').filter(Boolean)
+                    return (
+                      <div
+                        key={req.id}
+                        className="flex flex-col sm:flex-row justify-between gap-4 p-4 rounded-lg border bg-slate-50/50"
+                      >
+                        <div>
+                          <h4 className="font-semibold">
+                            {req.id} - {numbersList.length} número(s)
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            De: {req.origin_operator} | Para: Voacell
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Localidade: {req.city} - {req.state}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Criado em: {new Date(req.created).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-start sm:items-end gap-2 justify-center">
+                          {getStatusBadge(req.status)}
+                        </div>
                       </div>
-                      <div className="flex flex-col items-start sm:items-end gap-2 justify-center">
-                        {getStatusBadge(req.status)}
-                        {req.status === 'pending' && (
-                          <span className="text-xs text-amber-600 flex items-center">
-                            <Clock className="h-3 w-3 mr-1" /> Em análise pelos atendentes
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
@@ -152,6 +192,7 @@ export default function ClienteDashboard() {
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead>Vencimento</TableHead>
+                    <TableHead>Descrição</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ação</TableHead>
@@ -161,8 +202,9 @@ export default function ClienteDashboard() {
                   {invoices.map((inv) => (
                     <TableRow key={inv.id}>
                       <TableCell className="font-medium">
-                        {new Date(inv.date).toLocaleDateString('pt-BR')}
+                        {new Date(inv.due_date).toLocaleDateString('pt-BR')}
                       </TableCell>
+                      <TableCell>{inv.description}</TableCell>
                       <TableCell>R$ {inv.amount.toFixed(2).replace('.', ',')}</TableCell>
                       <TableCell>
                         {inv.status === 'paid' ? (
@@ -172,12 +214,25 @@ export default function ClienteDashboard() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="text-primary">
-                          <Download className="h-4 w-4 mr-2" /> PDF
-                        </Button>
+                        {inv.file ? (
+                          <a href={pb.files.getUrl(inv, inv.file)} target="_blank" rel="noreferrer">
+                            <Button variant="ghost" size="sm" className="text-primary">
+                              <Download className="h-4 w-4 mr-2" /> PDF
+                            </Button>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Sem arquivo</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
+                  {invoices.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">
+                        Nenhuma fatura encontrada.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

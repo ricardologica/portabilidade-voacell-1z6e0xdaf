@@ -1,98 +1,56 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
-import { Role, User, PortabilityRequest, Invoice, CallLog } from '@/types'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { Role, User } from '@/types'
+import pb from '@/lib/pocketbase/client'
 
 interface AppState {
   user: User | null
-  requests: PortabilityRequest[]
-  invoices: Invoice[]
-  calls: CallLog[]
-  login: (role: Role) => void
   logout: () => void
-  addRequest: (req: Omit<PortabilityRequest, 'id' | 'createdAt' | 'status'>) => void
-  updateRequestStatus: (id: string, status: PortabilityRequest['status']) => void
+  login: (role: Role) => void // Kept for compatibility with Layouts
 }
-
-const mockRequests: PortabilityRequest[] = [
-  {
-    id: 'REQ-001',
-    ownerName: 'Tech Mundo Telecom',
-    document: '27.298.128/0001-30',
-    email: 'contato@techmundo.com',
-    currentOperator: 'Vivo',
-    state: 'SP',
-    city: 'São Paulo',
-    numbers: ['11999991111', '11988882222'],
-    documentsUploaded: true,
-    videoAuthorized: true,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  },
-]
-
-const mockInvoices: Invoice[] = [
-  { id: 'INV-102', date: '2026-03-10', amount: 450.0, status: 'paid' },
-  { id: 'INV-103', date: '2026-04-10', amount: 450.0, status: 'pending' },
-]
-
-const mockCalls: CallLog[] = [
-  { id: 'C1', destination: '11 97777-3333', duration: '05:23', date: '2026-04-09 14:30' },
-  { id: 'C2', destination: '21 96666-4444', duration: '12:05', date: '2026-04-08 09:15' },
-]
 
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [requests, setRequests] = useState<PortabilityRequest[]>(mockRequests)
-
-  const login = (role: Role) => {
-    setUser({
-      id: role === 'admin' ? 'A1' : 'C1',
-      name: role === 'admin' ? 'Administrador' : 'João Silva',
-      role,
-      email: role === 'admin' ? 'admin@voacell.com' : 'joao@cliente.com',
-      avatar: `https://img.usecurling.com/ppl/thumbnail?seed=${role === 'admin' ? 5 : 2}`,
-    })
-  }
-
-  const logout = () => setUser(null)
-
-  const addRequest = (req: Omit<PortabilityRequest, 'id' | 'createdAt' | 'status'>) => {
-    const newReq: PortabilityRequest = {
-      ...req,
-      id: `REQ-${Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, '0')}`,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
+  const [user, setUser] = useState<User | null>(() => {
+    const rec = pb.authStore.record
+    if (rec) {
+      return {
+        id: rec.id,
+        name: rec.name,
+        role: rec.role as Role,
+        email: rec.email,
+        avatar: rec.avatar,
+      }
     }
-    setRequests((prev) => [newReq, ...prev])
-  }
+    return null
+  })
 
-  const updateRequestStatus = (id: string, status: PortabilityRequest['status']) => {
-    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
-  }
+  useEffect(() => {
+    return pb.authStore.onChange((token, record) => {
+      if (record) {
+        setUser({
+          id: record.id,
+          name: record.name,
+          role: record.role as Role,
+          email: record.email,
+          avatar: record.avatar,
+        })
+      } else {
+        setUser(null)
+      }
+    })
+  }, [])
 
-  return React.createElement(
-    AppContext.Provider,
-    {
-      value: {
-        user,
-        requests,
-        invoices: mockInvoices,
-        calls: mockCalls,
-        login,
-        logout,
-        addRequest,
-        updateRequestStatus,
-      },
-    },
-    children,
-  )
+  const logout = () => {
+    pb.authStore.clear()
+  }
+  const login = () => {}
+
+  return React.createElement(AppContext.Provider, { value: { user, logout, login } }, children)
 }
 
 export default function useAppStore() {
-  const context = useContext(AppContext)
-  if (!context) throw new Error('useAppStore must be used within AppStoreProvider')
-  return context
+  const ctx = useContext(AppContext)
+  if (!ctx) throw new Error('useAppStore must be used within AppStoreProvider')
+  return ctx
 }
