@@ -19,7 +19,14 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { Eye, FileText, CheckCircle, XCircle, Search } from 'lucide-react'
+import { Eye, FileText, CheckCircle, XCircle, Search, RefreshCw } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 
 export default function AdminDashboard() {
@@ -46,12 +53,14 @@ export default function AdminDashboard() {
   const handleAction = async (status: string) => {
     if (selectedReq) {
       try {
-        await pb.collection('portability_requests').update(selectedReq.id, { status })
+        const updated = await pb
+          .collection('portability_requests')
+          .update(selectedReq.id, { status })
         toast({
           title: 'Status Atualizado',
-          description: `A solicitação foi marcada como ${status}.`,
+          description: `O status da solicitação foi atualizado com sucesso.`,
         })
-        setSelectedReq(null)
+        setSelectedReq(updated)
       } catch (err) {
         toast({
           title: 'Erro',
@@ -260,30 +269,22 @@ export default function AdminDashboard() {
                   )}
                 </div>
 
-                {['pending', 'analyzing'].includes(selectedReq.status) && (
-                  <div className="pt-6 border-t flex gap-3">
-                    <Button
-                      className="flex-1 bg-primary hover:bg-primary/90 text-white"
-                      onClick={() => handleAction('approved')}
-                    >
-                      <CheckCircle className="mr-2 h-5 w-5" /> Aprovar
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      variant="outline"
-                      onClick={() => handleAction('analyzing')}
-                    >
-                      <Search className="mr-2 h-5 w-5" /> Analisar
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      variant="destructive"
-                      onClick={() => handleAction('rejected')}
-                    >
-                      <XCircle className="mr-2 h-5 w-5" /> Rejeitar
-                    </Button>
+                <div className="pt-6 border-t space-y-3">
+                  <h3 className="font-semibold pb-2">Atualizar Status</h3>
+                  <div className="flex gap-3">
+                    <Select value={selectedReq.status} onValueChange={(val) => handleAction(val)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione um status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="analyzing">Analisando</SelectItem>
+                        <SelectItem value="approved">Aprovada</SelectItem>
+                        <SelectItem value="rejected">Rejeitada</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                </div>
               </div>
             </>
           )}

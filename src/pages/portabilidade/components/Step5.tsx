@@ -31,7 +31,11 @@ export default function Step5({
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop()
+      try {
+        mediaRecorderRef.current.stop()
+      } catch (err) {
+        console.error('Error stopping MediaRecorder:', err)
+      }
       setStatus('recorded')
       if (timerRef.current) clearInterval(timerRef.current)
     }
@@ -62,6 +66,12 @@ export default function Step5({
   const startRecording = async () => {
     setError(null)
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error(
+          'Seu navegador não suporta gravação de vídeo ou não está em um contexto seguro (HTTPS).',
+        )
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user' },
         audio: true,
@@ -91,37 +101,72 @@ export default function Step5({
       }
 
       mediaRecorder.onstop = () => {
-        const rawMimeType = mediaRecorder.mimeType || 'video/mp4'
-        const baseMimeType = rawMimeType.split(';')[0]
+        try {
+          const rawMimeType = mediaRecorder.mimeType || 'video/mp4'
+          const baseMimeType = rawMimeType.split(';')[0]
 
-        const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska']
-        const finalMime = allowedMimes.includes(baseMimeType) ? baseMimeType : 'video/mp4'
+          const allowedMimes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska']
+          const finalMime = allowedMimes.includes(baseMimeType) ? baseMimeType : 'video/mp4'
 
-        let ext = 'mp4'
-        if (finalMime === 'video/webm') ext = 'webm'
-        else if (finalMime === 'video/quicktime') ext = 'mov'
-        else if (finalMime === 'video/x-matroska') ext = 'mkv'
+          let ext = 'mp4'
+          if (finalMime === 'video/webm') ext = 'webm'
+          else if (finalMime === 'video/quicktime') ext = 'mov'
+          else if (finalMime === 'video/x-matroska') ext = 'mkv'
 
-        const blob = new Blob(chunksRef.current, { type: finalMime })
-        const url = URL.createObjectURL(blob)
-        setVideoURL(url)
+          const blob = new Blob(chunksRef.current, { type: finalMime })
 
-        const file = new File([blob], `video_auth_${Date.now()}.${ext}`, { type: finalMime })
-        update({ video_auth_file: file })
+          if (blob.size === 0) {
+            throw new Error('Vídeo gravado está vazio. Tente novamente.')
+          }
 
-        stream.getTracks().forEach((track) => track.stop())
-        if (videoRef.current) videoRef.current.srcObject = null
+          const url = URL.createObjectURL(blob)
+          setVideoURL(url)
+
+          const file = new File([blob], `video_auth_${Date.now()}.${ext}`, { type: finalMime })
+          update({ video_auth_file: file })
+        } catch (err: any) {
+          console.error('Error processing recorded video:', err)
+          setError(`Falha ao processar o vídeo gravado: ${err.message}`)
+          setStatus('idle')
+        } finally {
+          stream.getTracks().forEach((track) => {
+            track.stop()
+            stream.removeTrack(track)
+          })
+          if (videoRef.current) {
+            videoRef.current.srcObject = null
+          }
+        }
       }
 
       mediaRecorder.start()
       setStatus('recording')
       setTimer(0)
       timerRef.current = setInterval(() => setTimer((t) => t + 1), 1000)
-    } catch (err) {
-      console.error('MediaRecorder error:', err)
-      setError(
-        'Não foi possível iniciar a gravação. Verifique as permissões de câmera e microfone no seu navegador.',
-      )
+    } catch (err: any) {
+      console.error('MediaRecorder initialization error:', err)
+      let errorMessage =
+        'Não foi possível iniciar a gravação. Verifique as permissões de câmera e microfone no seu navegador.'
+
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        errorMessage =
+          'Permissão de câmera/microfone negada. Por favor, libere o acesso nas configurações do seu navegador (ícone de cadeado na barra de endereços).'
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        errorMessage =
+          'Nenhuma câmera ou microfone encontrado no seu dispositivo. Verifique se estão conectados corretamente.'
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMessage =
+          'Sua câmera ou microfone já está em uso por outro aplicativo ou aba do navegador. Feche-os e tente novamente.'
+      } else if (
+        err.name === 'OverconstrainedError' ||
+        err.name === 'ConstraintNotSatisfiedError'
+      ) {
+        errorMessage = 'Sua câmera não suporta as configurações solicitadas.'
+      } else {
+        errorMessage = `Erro desconhecido ao acessar mídia: ${err.message || err.name || 'Erro interno'}.`
+      }
+
+      setError(errorMessage)
       setStatus('idle')
     }
   }
