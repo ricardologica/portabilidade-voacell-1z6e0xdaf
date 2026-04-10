@@ -10,13 +10,39 @@ export default function Step4({
   data: FormData
   update: (d: Partial<FormData>) => void
 }) {
-  const [status, setStatus] = useState<'idle' | 'recording' | 'recorded'>(
+  const [status, setStatus] = useState<'idle' | 'recording' | 'recorded' | 'permission_denied'>(
     data.videoAuthorized ? 'recorded' : 'idle',
   )
   const [timer, setTimer] = useState(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
-  const startRecording = () => {
+  const requestCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+      return true
+    } catch (err) {
+      console.warn('Camera access denied or unavailable, using simulation fallback.', err)
+      return false
+    }
+  }
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream
+      stream.getTracks().forEach((track) => track.stop())
+      videoRef.current.srcObject = null
+    }
+  }
+
+  const startRecording = async () => {
+    const hasCamera = await requestCamera()
+    if (!hasCamera) {
+      // Fallback to simulation naturally happens via the fallback UI block
+    }
     setStatus('recording')
     setTimer(0)
     intervalRef.current = setInterval(() => setTimer((t) => t + 1), 1000)
@@ -25,6 +51,7 @@ export default function Step4({
   const stopRecording = () => {
     setStatus('recorded')
     if (intervalRef.current) clearInterval(intervalRef.current)
+    stopCamera()
     update({ videoAuthorized: true })
   }
 
@@ -34,6 +61,10 @@ export default function Step4({
   }
 
   const formatTime = (s: number) => `00:${s.toString().padStart(2, '0')}`
+  const operatorName =
+    data.currentOperator === 'Outra'
+      ? data.operatorOther || 'Origem'
+      : data.currentOperator || 'Origem'
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -52,7 +83,7 @@ export default function Step4({
           </span>{' '}
           e autorizo minha portabilidade da Operadora{' '}
           <span className="underline decoration-primary decoration-2 underline-offset-2">
-            {data.currentOperator || '[Operadora]'}
+            {operatorName}
           </span>{' '}
           para a Operadora Voacell com posse do documento na mão."
         </p>
@@ -62,26 +93,42 @@ export default function Step4({
         {status === 'idle' && (
           <div className="flex flex-col items-center text-slate-400">
             <Camera className="h-16 w-16 mb-4 opacity-50" />
-            <p>Câmera Simulada</p>
+            <p>A câmera será ativada ao iniciar a gravação</p>
           </div>
         )}
 
         {status === 'recording' && (
-          <div className="absolute inset-0 border-4 border-red-500/50 rounded-lg pointer-events-none animate-pulse-fast" />
+          <div className="absolute inset-0 border-4 border-red-500/50 rounded-lg pointer-events-none animate-pulse-fast z-10" />
         )}
 
         {status === 'recording' && (
-          <div className="flex flex-col items-center">
-            <div className="flex items-center bg-black/50 text-white px-3 py-1 rounded-full mb-4 backdrop-blur">
-              <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse mr-2" />
-              <span className="font-mono">{formatTime(timer)}</span>
-            </div>
-            <img
-              src="https://img.usecurling.com/ppl/medium?gender=male"
-              alt="Simulated Face"
-              className="w-32 h-32 rounded-full object-cover border-2 border-white/20"
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
             />
-          </div>
+            {/* Fallback overlay if video fails to load stream */}
+            {!videoRef.current?.srcObject && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-0">
+                <img
+                  src="https://img.usecurling.com/ppl/medium?gender=male"
+                  alt="Simulated Face"
+                  className="w-32 h-32 rounded-full object-cover border-2 border-white/20 mb-4"
+                />
+                <p className="text-white/50 text-sm">Simulação (Câmera indisponível)</p>
+              </div>
+            )}
+
+            <div className="absolute top-4 left-0 right-0 flex justify-center z-10">
+              <div className="flex items-center bg-black/50 text-white px-3 py-1 rounded-full backdrop-blur shadow-lg">
+                <div className="h-3 w-3 bg-red-500 rounded-full animate-pulse mr-2" />
+                <span className="font-mono">{formatTime(timer)}</span>
+              </div>
+            </div>
+          </>
         )}
 
         {status === 'recorded' && (
@@ -97,7 +144,7 @@ export default function Step4({
           <Button
             onClick={startRecording}
             size="lg"
-            className="bg-red-600 hover:bg-red-700 text-white rounded-full px-8"
+            className="bg-red-600 hover:bg-red-700 text-white rounded-full px-8 shadow-md"
           >
             <Camera className="mr-2 h-5 w-5" /> Iniciar Gravação
           </Button>
@@ -107,7 +154,7 @@ export default function Step4({
             onClick={stopRecording}
             size="lg"
             variant="destructive"
-            className="rounded-full px-8 shadow-lg"
+            className="rounded-full px-8 shadow-lg z-20"
           >
             <Square className="mr-2 h-5 w-5 fill-current" /> Parar Gravação
           </Button>

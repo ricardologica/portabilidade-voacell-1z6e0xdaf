@@ -16,7 +16,9 @@ export interface PortabilityRequest {
   document: string // CPF or CNPJ
   email: string
   currentOperator: string
-  locality: string
+  operatorOther?: string
+  state: string
+  city: string
   numbers: string[]
   documentsUploaded: boolean
   videoAuthorized: boolean

@@ -119,7 +119,12 @@ export default function AdminDashboard() {
                     <div className="font-medium">{req.ownerName}</div>
                     <div className="text-xs text-muted-foreground">{req.document}</div>
                   </TableCell>
-                  <TableCell>{req.currentOperator}</TableCell>
+                  <TableCell>
+                    {req.currentOperator === 'Outra' ? req.operatorOther : req.currentOperator}
+                    <div className="text-xs text-muted-foreground">
+                      {req.city} - {req.state}
+                    </div>
+                  </TableCell>
                   <TableCell>{new Date(req.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{getStatusBadge(req.status)}</TableCell>
                   <TableCell className="text-right">
@@ -166,7 +171,13 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <span className="text-muted-foreground block">Operadora Atual</span>
-                      {selectedReq.currentOperator}
+                      {selectedReq.currentOperator === 'Outra'
+                        ? selectedReq.operatorOther
+                        : selectedReq.currentOperator}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">Localidade</span>
+                      {selectedReq.city} - {selectedReq.state}
                     </div>
                     <div className="col-span-2">
                       <span className="text-muted-foreground block mb-1">

@@ -88,7 +88,7 @@ export default function ClienteDashboard() {
             value="invoices"
             className="rounded data-[state=active]:bg-slate-100 h-9 px-6"
           >
-            Faturas
+            Faturas e Boletos
           </TabsTrigger>
           <TabsTrigger value="calls" className="rounded data-[state=active]:bg-slate-100 h-9 px-6">
             Chamadas
@@ -112,10 +112,18 @@ export default function ClienteDashboard() {
                     >
                       <div>
                         <h4 className="font-semibold">
-                          {req.id} - {req.numbers.length} números
+                          {req.id} - {req.numbers.length}{' '}
+                          {req.numbers.length === 1 ? 'número' : 'números'}
                         </h4>
                         <p className="text-sm text-muted-foreground">
-                          De: {req.currentOperator} | Para: Voacell
+                          De:{' '}
+                          {req.currentOperator === 'Outra'
+                            ? req.operatorOther
+                            : req.currentOperator}{' '}
+                          | Para: Voacell
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Localidade: {req.city} - {req.state}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
                           Criado em: {new Date(req.createdAt).toLocaleDateString('pt-BR')}
