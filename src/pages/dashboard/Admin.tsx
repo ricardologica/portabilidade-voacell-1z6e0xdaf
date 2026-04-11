@@ -74,19 +74,11 @@ export default function AdminDashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-500">Aprovada</Badge>
+        return <Badge className="bg-green-500 hover:bg-green-600">Aprovada</Badge>
       case 'pending':
-        return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-            Pendente
-          </Badge>
-        )
+        return <Badge className="bg-slate-500 hover:bg-slate-600 text-white">Pendente</Badge>
       case 'analyzing':
-        return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-            Analisando
-          </Badge>
-        )
+        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Analisando</Badge>
       case 'rejected':
         return <Badge variant="destructive">Rejeitada</Badge>
       default:
