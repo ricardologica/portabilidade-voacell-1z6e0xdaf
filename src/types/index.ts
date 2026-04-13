@@ -50,6 +50,7 @@ export interface WidgetSetting {
 }
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
       'react-widget-uv': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
