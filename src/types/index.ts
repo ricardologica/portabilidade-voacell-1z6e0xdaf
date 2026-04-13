@@ -39,3 +39,24 @@ export interface CallLog {
   duration: string
   date: string
 }
+
+export interface WidgetSetting {
+  id: string
+  name: string
+  agent_id: string
+  schema: string
+  type: string
+  is_active: boolean
+}
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'react-widget-uv': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        agent_id?: string
+        schema?: string
+        type?: string
+      }
+    }
+  }
+}

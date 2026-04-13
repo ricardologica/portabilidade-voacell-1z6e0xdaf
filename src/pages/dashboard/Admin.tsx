@@ -28,6 +28,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import WidgetAdmin from './WidgetAdmin'
 
 export default function AdminDashboard() {
   const [requests, setRequests] = useState<any[]>([])
@@ -87,8 +89,17 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
+    <Tabs defaultValue="requests" className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">Painel Administrativo</h2>
+        <TabsList>
+          <TabsTrigger value="requests">Solicitações</TabsTrigger>
+          <TabsTrigger value="widgets">Atendimento Inteligente</TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="requests" className="space-y-6 m-0">
+        <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">

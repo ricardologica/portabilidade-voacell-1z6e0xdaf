@@ -13,6 +13,7 @@ import PortabilidadePage from './pages/portabilidade/index'
 import ClienteDashboard from './pages/dashboard/Cliente'
 import AdminDashboard from './pages/dashboard/Admin'
 import NotFound from './pages/NotFound'
+import WidgetRenderer from './components/WidgetRenderer'
 
 const ProtectedRoute = ({
   children,
@@ -73,6 +74,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AppRoutes />
+        <WidgetRenderer />
       </TooltipProvider>
     </BrowserRouter>
   </AppStoreProvider>
