@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 import Step1 from './components/Step1'
 import Step2 from './components/Step2'
@@ -89,9 +90,10 @@ export default function PortabilidadePage() {
       })
       navigate('/cliente')
     } catch (err: any) {
+      console.error('Falha ao criar solicitação de portabilidade:', err)
       toast({
-        title: 'Erro',
-        description: err.message || 'Falha ao enviar solicitação.',
+        title: 'Erro ao enviar solicitação',
+        description: getErrorMessage(err),
         variant: 'destructive',
       })
     } finally {
