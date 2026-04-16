@@ -1,6 +1,6 @@
 import React from 'react'
-import { Cloud } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import logoUrl from '@/assets/captura-de-tela-2026-04-15-220859-1e091.png'
 
 export function Logo({
   className,
@@ -11,19 +11,14 @@ export function Logo({
 }) {
   return (
     <div className={cn('flex items-center gap-2 font-bold text-xl', className)}>
-      <div
+      <img
+        src={logoUrl}
+        alt="Voacell"
         className={cn(
-          'flex items-center justify-center p-1.5 rounded-lg',
-          variant === 'default' ? 'bg-primary text-white' : 'bg-white text-primary',
+          'h-10 object-contain rounded-md',
+          variant === 'white' && 'brightness-0 invert',
         )}
-      >
-        <Cloud size={24} strokeWidth={2.5} />
-      </div>
-      <span
-        className={cn('tracking-tight', variant === 'default' ? 'text-secondary' : 'text-white')}
-      >
-        Voacell
-      </span>
+      />
     </div>
   )
 }

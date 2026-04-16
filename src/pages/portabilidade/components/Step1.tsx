@@ -30,15 +30,24 @@ export default function Step1({
           body: formData,
         })
 
+        // Normalize phone lines
+        const normalizedLines = (res.phone_lines || '')
+          .split('\n')
+          .map((line: string) => line.replace(/\D/g, ''))
+          .filter(Boolean)
+          .join('\n')
+
         update({
           holder_name: res.holder_name,
           tax_id: res.tax_id,
           total_amount: res.total_amount,
-          phone_lines: res.phone_lines,
+          phone_lines: normalizedLines,
           titular_name: res.holder_name || '',
           titular_document: res.tax_id || '',
-          numbers: res.phone_lines || '',
+          numbers: normalizedLines,
           origin_operator: res.origin_operator || '',
+          state: res.state || data.state,
+          city: res.city || data.city,
         })
 
         toast({

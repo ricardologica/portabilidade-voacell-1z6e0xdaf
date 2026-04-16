@@ -10,8 +10,10 @@ routerAdd(
       holder_name: 'JULIANO YUKIO WATANABE',
       tax_id: '02558157000162',
       total_amount: 27.47,
-      phone_lines: '1437621547',
+      phone_lines: '(14) 3762-1547\n(14) 99999-9999',
       origin_operator: 'Vivo',
+      state: 'SP',
+      city: 'São Paulo',
     })
   },
   $apis.requireAuth(),

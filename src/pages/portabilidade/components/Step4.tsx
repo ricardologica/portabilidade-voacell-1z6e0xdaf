@@ -39,9 +39,30 @@ export default function Step4({
         const invoiceName = (data.holder_name || data.titular_name)?.trim().toUpperCase() || ''
 
         let showWarning = false
-        if (extractedName && invoiceName) {
-          if (!extractedName.includes(invoiceName) && !invoiceName.includes(extractedName)) {
+        const isCnpjDoc =
+          res.titular_document?.replace(/\D/g, '').length > 11 ||
+          data.titular_document?.replace(/\D/g, '').length > 11
+
+        if (isCnpjDoc) {
+          if (!res.representative_name) {
             showWarning = true
+            setWarning(
+              'Atenção: Não foi possível identificar o representante legal autorizado neste documento para o CNPJ informado. Por favor, verifique se enviou o Contrato Social ou documento com poderes de representação.',
+            )
+          } else if (extractedName && invoiceName && !invoiceName.includes(extractedName)) {
+            showWarning = true
+            setWarning(
+              `Atenção: O nome da empresa no documento (${res.titular_name}) não corresponde exatamente ao da fatura (${data.holder_name || data.titular_name}).`,
+            )
+          }
+        } else {
+          if (extractedName && invoiceName) {
+            if (!extractedName.includes(invoiceName) && !invoiceName.includes(extractedName)) {
+              showWarning = true
+              setWarning(
+                `Atenção: O nome no documento (${res.titular_name}) não corresponde exatamente ao nome da fatura (${data.holder_name || data.titular_name}). Certifique-se de que é a mesma pessoa.`,
+              )
+            }
           }
         }
 
@@ -50,12 +71,6 @@ export default function Step4({
           titular_document: res.titular_document || data.titular_document,
           representative_name: res.representative_name || data.representative_name || '',
         })
-
-        if (showWarning) {
-          setWarning(
-            `Atenção: O nome no documento (${res.titular_name}) não corresponde exatamente ao nome da fatura (${data.holder_name || data.titular_name}). Certifique-se de que é a mesma pessoa.`,
-          )
-        }
       } catch (err) {
         console.error(err)
       } finally {
@@ -103,7 +118,7 @@ export default function Step4({
         {warning && (
           <Alert variant="destructive" className="mt-4">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Inconsistência Detectada</AlertTitle>
+            <AlertTitle>Validação do Documento</AlertTitle>
             <AlertDescription>{warning}</AlertDescription>
           </Alert>
         )}
