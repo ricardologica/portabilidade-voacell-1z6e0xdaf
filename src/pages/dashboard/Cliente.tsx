@@ -51,6 +51,12 @@ export default function ClienteDashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'draft':
+        return (
+          <Badge variant="outline" className="border-amber-400 text-amber-600">
+            Rascunho
+          </Badge>
+        )
       case 'approved':
         return <Badge className="bg-green-500 hover:bg-green-600">Aprovado</Badge>
       case 'pending':
@@ -66,7 +72,7 @@ export default function ClienteDashboard() {
 
   const activeLines = requests.filter((r) => r.status === 'approved').length
   const pendingReqs = requests.filter(
-    (r) => r.status !== 'approved' && r.status !== 'rejected',
+    (r) => r.status !== 'approved' && r.status !== 'rejected' && r.status !== 'draft',
   ).length
   const lastInvoice = invoices[0]
 
@@ -182,6 +188,16 @@ export default function ClienteDashboard() {
                         </div>
                         <div className="flex flex-col items-start sm:items-end gap-2 justify-center">
                           {getStatusBadge(req.status)}
+                          {req.status === 'draft' && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => navigate('/portabilidade')}
+                              className="h-auto p-0 text-primary"
+                            >
+                              Continuar Solicitação &rarr;
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )

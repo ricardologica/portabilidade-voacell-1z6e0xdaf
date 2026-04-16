@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -21,28 +21,6 @@ import { Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PortabilityFormData } from '../index'
 
-const STATES = ['SP', 'RJ', 'MG', 'PR', 'SC', 'RS', 'BA', 'PE', 'CE', 'DF']
-const CITIES_MOCK: Record<string, string[]> = {
-  SP: [
-    'São Paulo',
-    'Campinas',
-    'Santos',
-    'Ribeirão Preto',
-    'São José dos Campos',
-    'Sorocaba',
-    'Guarulhos',
-  ],
-  RJ: ['Rio de Janeiro', 'Niterói', 'Macaé', 'Petrópolis', 'Cabo Frio', 'Volta Redonda'],
-  MG: ['Belo Horizonte', 'Uberlândia', 'Juiz de Fora', 'Ouro Preto', 'Contagem', 'Betim'],
-  PR: ['Curitiba', 'Londrina', 'Maringá', 'Ponta Grossa', 'Cascavel'],
-  SC: ['Florianópolis', 'Joinville', 'Blumenau', 'São José', 'Chapecó'],
-  RS: ['Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Canoas', 'Santa Maria'],
-  BA: ['Salvador', 'Feira de Santana', 'Vitória da Conquista', 'Camaçari'],
-  PE: ['Recife', 'Jaboatão dos Guararapes', 'Olinda', 'Caruaru'],
-  CE: ['Fortaleza', 'Caucaia', 'Juazeiro do Norte', 'Maracanaú'],
-  DF: ['Brasília', 'Taguatinga', 'Ceilândia'],
-}
-
 export default function Step2({
   data,
   update,
@@ -51,7 +29,33 @@ export default function Step2({
   update: (d: Partial<PortabilityFormData>) => void
 }) {
   const [openCity, setOpenCity] = useState(false)
-  const cities = data.state ? CITIES_MOCK[data.state] || [] : []
+  const [states, setStates] = useState<string[]>([])
+  const [cities, setCities] = useState<string[]>([])
+  const [loadingCities, setLoadingCities] = useState(false)
+
+  useEffect(() => {
+    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
+      .then((res) => res.json())
+      .then((res) => setStates(res.map((s: any) => s.sigla)))
+      .catch((err) => console.error(err))
+  }, [])
+
+  useEffect(() => {
+    if (data.state) {
+      setLoadingCities(true)
+      fetch(
+        `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${data.state}/municipios?orderBy=nome`,
+      )
+        .then((res) => res.json())
+        .then((res) => {
+          setCities(res.map((c: any) => c.nome))
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setLoadingCities(false))
+    } else {
+      setCities([])
+    }
+  }, [data.state])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -63,11 +67,15 @@ export default function Step2({
               <SelectValue placeholder="Selecione o Estado" />
             </SelectTrigger>
             <SelectContent>
-              {STATES.map((uf) => (
-                <SelectItem key={uf} value={uf}>
-                  {uf}
-                </SelectItem>
-              ))}
+              {states.length > 0 ? (
+                states.map((uf) => (
+                  <SelectItem key={uf} value={uf}>
+                    {uf}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="SP">SP</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -107,7 +115,9 @@ export default function Step2({
               {data.city
                 ? data.city
                 : data.state
-                  ? 'Selecione uma cidade...'
+                  ? loadingCities
+                    ? 'Carregando cidades...'
+                    : 'Selecione uma cidade...'
                   : 'Selecione o Estado primeiro'}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>

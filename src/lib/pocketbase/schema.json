@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-16T01:16:48.443Z",
+  "generatedAt": "2026-04-16T02:05:33.703Z",
   "collections": [
     {
       "name": "users",
@@ -72,37 +72,37 @@
         {
           "name": "state",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
           "name": "city",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
           "name": "origin_operator",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
           "name": "numbers",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
           "name": "titular_name",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
           "name": "titular_document",
           "type": "text",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
@@ -128,7 +128,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["pending", "analyzing", "approved", "rejected"]
+          "selectValues": ["draft", "pending", "analyzing", "approved", "rejected"]
         },
         {
           "name": "created",
@@ -164,6 +164,12 @@
         },
         {
           "name": "phone_lines",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "representative_name",
           "type": "text",
           "required": false,
           "system": false

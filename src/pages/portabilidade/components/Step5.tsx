@@ -19,9 +19,23 @@ export default function Step5({
     data.video_auth_file ? 'recorded' : 'idle',
   )
   const [timer, setTimer] = useState(0)
-  const [videoURL, setVideoURL] = useState<string | null>(
-    data.video_auth_file ? URL.createObjectURL(data.video_auth_file) : null,
-  )
+  const getVideoUrl = useCallback(() => {
+    if (data.video_auth_file instanceof File) {
+      return URL.createObjectURL(data.video_auth_file)
+    } else if (typeof data.video_auth_file === 'string' && data.id) {
+      return pb.files.getUrl(
+        { collectionId: 'portability_requests', id: data.id } as any,
+        data.video_auth_file,
+      )
+    }
+    return null
+  }, [data.video_auth_file, data.id])
+
+  const [videoURL, setVideoURL] = useState<string | null>(getVideoUrl())
+
+  useEffect(() => {
+    setVideoURL(getVideoUrl())
+  }, [getVideoUrl])
   const [error, setError] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -208,7 +222,7 @@ export default function Step5({
         <p className="text-lg font-medium text-secondary">
           "Meu nome é{' '}
           <span className="underline decoration-primary decoration-2 underline-offset-2">
-            {data.titular_name || '[Nome do Titular]'}
+            {data.representative_name || data.titular_name || '[Nome do Titular]'}
           </span>{' '}
           e autorizo minha portabilidade da Operadora{' '}
           <span className="underline decoration-primary decoration-2 underline-offset-2">

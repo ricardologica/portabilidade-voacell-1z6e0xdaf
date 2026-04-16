@@ -38,6 +38,7 @@ export default function Step1({
           titular_name: res.holder_name || '',
           titular_document: res.tax_id || '',
           numbers: res.phone_lines || '',
+          origin_operator: res.origin_operator || '',
         })
 
         toast({
@@ -75,7 +76,11 @@ export default function Step1({
         <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 transition-colors">
           <FileUp className="h-8 w-8 text-slate-400 mb-2" />
           <p className="text-sm font-medium mb-1 text-center truncate max-w-full px-4">
-            {data.invoice_file ? data.invoice_file.name : 'Clique para selecionar o arquivo PDF'}
+            {data.invoice_file instanceof File
+              ? data.invoice_file.name
+              : typeof data.invoice_file === 'string'
+                ? 'Fatura Salva (Rascunho)'
+                : 'Clique para selecionar o arquivo PDF'}
           </p>
           <p className="text-xs text-muted-foreground mb-4">Apenas arquivos PDF são aceitos.</p>
           <label className="cursor-pointer bg-white border shadow-sm px-4 py-2 rounded-md text-sm hover:bg-slate-50">
