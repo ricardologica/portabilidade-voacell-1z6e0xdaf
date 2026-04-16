@@ -188,11 +188,17 @@ export default function ClienteDashboard() {
                         </div>
                         <div className="flex flex-col items-start sm:items-end gap-2 justify-center">
                           {getStatusBadge(req.status)}
-                          {req.status === 'draft' && (
+                          {(req.status === 'draft' ||
+                            (req.status === 'pending' &&
+                              (!req.video_auth_file ||
+                                !req.document_file ||
+                                !req.invoice_file))) && (
                             <Button
                               variant="link"
                               size="sm"
-                              onClick={() => navigate('/portabilidade')}
+                              onClick={() =>
+                                navigate('/portabilidade', { state: { requestId: req.id } })
+                              }
                               className="h-auto p-0 text-primary"
                             >
                               Continuar Solicitação &rarr;

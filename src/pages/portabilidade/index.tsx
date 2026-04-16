@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import useAppStore from '@/stores/useAppStore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -54,7 +54,10 @@ export default function PortabilidadePage() {
 
   const { user } = useAppStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
+
+  const editingId = (location.state as any)?.requestId
 
   const [debouncedData, setDebouncedData] = useState(formData)
   const isInitialMount = useRef(true)
@@ -63,7 +66,56 @@ export default function PortabilidadePage() {
   const updateData = (fields: Partial<PortabilityFormData>) =>
     setFormData((prev) => ({ ...prev, ...fields }))
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, 5))
+  const handleNext = async () => {
+    if (step === 4) {
+      if (formData.document_file instanceof File) {
+        setLoading(true)
+        try {
+          const uploadData = new FormData()
+          uploadData.append('file', formData.document_file)
+          const res = await pb.send('/backend/v1/parse-document', {
+            method: 'POST',
+            body: uploadData,
+          })
+
+          const docName = res.titular_name?.trim().toUpperCase() || ''
+          const inputName = formData.titular_name?.trim().toUpperCase() || ''
+          const docDoc = res.titular_document?.replace(/\D/g, '') || ''
+          const inputDoc = formData.titular_document?.replace(/\D/g, '') || ''
+
+          let hasWarning = false
+          if (docName && inputName) {
+            const inputParts = inputName.split(' ').filter((p: string) => p.length > 2)
+            const hasMatch = inputParts.some((p: string) => docName.includes(p))
+            if (!hasMatch) {
+              toast({
+                title: 'Aviso de Divergência de Nome',
+                description:
+                  'O nome no documento parece não coincidir com o nome do titular da fatura.',
+                variant: 'destructive',
+              })
+              hasWarning = true
+            }
+          }
+
+          if (!hasWarning && docDoc && inputDoc && docDoc !== inputDoc) {
+            toast({
+              title: 'Aviso de Divergência de Documento',
+              description:
+                'O número do documento (CPF/CNPJ) lido na imagem não confere com o digitado.',
+              variant: 'destructive',
+            })
+          }
+        } catch (err) {
+          console.error('Erro na validação do documento:', err)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+    setStep((s) => Math.min(s + 1, 5))
+  }
+
   const handleBack = () => setStep((s) => Math.max(s - 1, 1))
 
   const canProceed = () => {
@@ -84,13 +136,20 @@ export default function PortabilidadePage() {
     if (!user) return
     const loadDraft = async () => {
       try {
-        const drafts = await pb.collection('portability_requests').getFullList({
-          filter: `user_id = "${user.id}" && status = "draft"`,
-          sort: '-created',
-          limit: 1,
-        })
-        if (drafts.length > 0) {
-          const draft = drafts[0]
+        let draft
+        if (editingId) {
+          const req = await pb.collection('portability_requests').getOne(editingId)
+          if (req.user_id === user.id) draft = req
+        } else {
+          const drafts = await pb.collection('portability_requests').getFullList({
+            filter: `user_id = "${user.id}" && status = "draft"`,
+            sort: '-created',
+            limit: 1,
+          })
+          if (drafts.length > 0) draft = drafts[0]
+        }
+
+        if (draft) {
           setFormData({
             id: draft.id,
             invoice_file: draft.invoice_file || null,

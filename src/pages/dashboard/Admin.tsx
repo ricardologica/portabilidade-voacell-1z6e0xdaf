@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Sheet,
   SheetContent,
@@ -19,7 +21,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { Eye, FileText, CheckCircle, XCircle, Search, RefreshCw } from 'lucide-react'
+import { Eye, FileText } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -35,6 +37,11 @@ export default function AdminDashboard() {
   const [requests, setRequests] = useState<any[]>([])
   const [selectedReq, setSelectedReq] = useState<any | null>(null)
   const { toast } = useToast()
+
+  const [editEot, setEditEot] = useState('')
+  const [editTicket, setEditTicket] = useState('')
+  const [editScheduling, setEditScheduling] = useState('')
+  const [editStatus, setEditStatus] = useState('')
 
   const loadData = async () => {
     try {
@@ -52,21 +59,42 @@ export default function AdminDashboard() {
   }, [])
   useRealtime('portability_requests', loadData)
 
-  const handleAction = async (status: string) => {
+  useEffect(() => {
+    if (selectedReq) {
+      setEditEot(selectedReq.eot || '')
+      setEditTicket(selectedReq.ticket_number || '')
+      setEditScheduling(selectedReq.scheduling ? selectedReq.scheduling.split('T')[0] : '')
+      setEditStatus(selectedReq.status || 'pending')
+    }
+  }, [selectedReq])
+
+  const handleSave = async () => {
     if (selectedReq) {
       try {
+        const dataToUpdate: any = {
+          status: editStatus,
+          eot: editEot,
+          ticket_number: editTicket,
+        }
+        if (editScheduling) {
+          dataToUpdate.scheduling = new Date(editScheduling).toISOString()
+        } else {
+          dataToUpdate.scheduling = null
+        }
+
         const updated = await pb
           .collection('portability_requests')
-          .update(selectedReq.id, { status })
+          .update(selectedReq.id, dataToUpdate)
+
         toast({
-          title: 'Status Atualizado',
-          description: `O status da solicitação foi atualizado com sucesso.`,
+          title: 'Dados Atualizados',
+          description: `A solicitação foi atualizada com sucesso.`,
         })
         setSelectedReq(updated)
       } catch (err) {
         toast({
           title: 'Erro',
-          description: 'Não foi possível atualizar o status.',
+          description: 'Não foi possível atualizar os dados. Verifique suas permissões.',
           variant: 'destructive',
         })
       }
@@ -142,40 +170,49 @@ export default function AdminDashboard() {
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Cliente / Doc</TableHead>
-                  <TableHead>Operadora Origem</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead>Cód</TableHead>
+                  <TableHead>EOT</TableHead>
+                  <TableHead>Data de Solicitação</TableHead>
+                  <TableHead>Qtd. DIDs</TableHead>
+                  <TableHead>TN</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead>Agendamento</TableHead>
+                  <TableHead>Ticket</TableHead>
+                  <TableHead className="text-right">Opções</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map((req) => (
-                  <TableRow key={req.id}>
-                    <TableCell className="font-medium text-secondary">{req.id}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">{req.titular_name}</div>
-                      <div className="text-xs text-muted-foreground">{req.titular_document}</div>
-                    </TableCell>
-                    <TableCell>
-                      {req.origin_operator}
-                      <div className="text-xs text-muted-foreground">
-                        {req.city} - {req.state}
-                      </div>
-                    </TableCell>
-                    <TableCell>{new Date(req.created).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{getStatusBadge(req.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedReq(req)}>
-                        <Eye className="h-4 w-4 mr-2" /> Analisar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {requests.map((req) => {
+                  const numList = req.numbers ? req.numbers.split('\n').filter(Boolean) : []
+                  return (
+                    <TableRow key={req.id}>
+                      <TableCell className="font-medium text-secondary">
+                        {req.id.slice(0, 8)}
+                      </TableCell>
+                      <TableCell>{req.eot || '-'}</TableCell>
+                      <TableCell>{new Date(req.created).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{numList.length}</TableCell>
+                      <TableCell className="max-w-[120px] truncate" title={req.numbers}>
+                        {req.numbers || '-'}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(req.status)}</TableCell>
+                      <TableCell>
+                        {req.scheduling
+                          ? new Date(req.scheduling).toLocaleDateString('pt-BR')
+                          : '-'}
+                      </TableCell>
+                      <TableCell>{req.ticket_number || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedReq(req)}>
+                          <Eye className="h-4 w-4 mr-2" /> Analisar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
                 {requests.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={9} className="text-center py-4">
                       Nenhuma solicitação encontrada.
                     </TableCell>
                   </TableRow>
@@ -272,20 +309,52 @@ export default function AdminDashboard() {
                     )}
                   </div>
 
-                  <div className="pt-6 border-t space-y-3">
-                    <h3 className="font-semibold pb-2">Atualizar Status</h3>
-                    <div className="flex gap-3">
-                      <Select value={selectedReq.status} onValueChange={(val) => handleAction(val)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione um status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pendente</SelectItem>
-                          <SelectItem value="analyzing">Analisando</SelectItem>
-                          <SelectItem value="approved">Aprovada</SelectItem>
-                          <SelectItem value="rejected">Rejeitada</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  <div className="pt-6 border-t space-y-4">
+                    <h3 className="font-semibold pb-2">Gerenciamento da Solicitação</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>EOT (Código da Operadora)</Label>
+                        <Input
+                          value={editEot}
+                          onChange={(e) => setEditEot(e.target.value)}
+                          placeholder="Ex: 000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Número do Ticket</Label>
+                        <Input
+                          value={editTicket}
+                          onChange={(e) => setEditTicket(e.target.value)}
+                          placeholder="Ex: INC-123"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Data de Agendamento</Label>
+                        <Input
+                          type="date"
+                          value={editScheduling}
+                          onChange={(e) => setEditScheduling(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={editStatus} onValueChange={setEditStatus}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pendente</SelectItem>
+                            <SelectItem value="analyzing">Analisando</SelectItem>
+                            <SelectItem value="approved">Aprovada</SelectItem>
+                            <SelectItem value="rejected">Rejeitada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                      <Button onClick={handleSave} className="w-full">
+                        Salvar Alterações
+                      </Button>
                     </div>
                   </div>
                 </div>

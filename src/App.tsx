@@ -53,8 +53,9 @@ const AppRoutes = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/admin" element={<Navigate to="/admin/requests" replace />} />
       <Route
-        path="/admin"
+        path="/admin/requests"
         element={
           <ProtectedRoute allowedRole="admin">
             <AdminDashboard />

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-16T02:16:05.299Z",
+  "generatedAt": "2026-04-16T03:50:04.799Z",
   "collections": [
     {
       "name": "users",
@@ -58,7 +58,7 @@
         "list": "@request.auth.id != '' && (user_id = @request.auth.id || @request.auth.role = 'admin')",
         "view": "@request.auth.id != '' && (user_id = @request.auth.id || @request.auth.role = 'admin')",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && @request.auth.role = 'admin'",
+        "update": "@request.auth.id != '' && (user_id = @request.auth.id || @request.auth.role = 'admin')",
         "delete": "@request.auth.id != '' && @request.auth.role = 'admin'"
       },
       "fields": [
@@ -170,6 +170,24 @@
         },
         {
           "name": "representative_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "eot",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "scheduling",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ticket_number",
           "type": "text",
           "required": false,
           "system": false

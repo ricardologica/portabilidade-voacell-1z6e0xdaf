@@ -24,6 +24,9 @@ export interface PortabilityRequest {
   videoAuthorized: boolean
   status: RequestStatus
   createdAt: string
+  eot?: string
+  scheduling?: string
+  ticket_number?: string
 }
 
 export interface Invoice {
