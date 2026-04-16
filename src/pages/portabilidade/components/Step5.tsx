@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { PortabilityFormData } from '../index'
+import pb from '@/lib/pocketbase/client'
 
 const MAX_RECORDING_SECONDS = 15
 
