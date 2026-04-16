@@ -119,7 +119,9 @@ export default function PortabilidadePage() {
 
           setStep(resumeStep)
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('Erro ao carregar rascunho:', err)
+      }
     }
     loadDraft()
   }, [user])
