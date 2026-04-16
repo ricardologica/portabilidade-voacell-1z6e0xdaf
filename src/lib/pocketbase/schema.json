@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-13T22:00:04.755Z",
+  "generatedAt": "2026-04-16T01:16:48.443Z",
   "collections": [
     {
       "name": "users",
@@ -143,6 +143,30 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "holder_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tax_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_amount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "phone_lines",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -267,6 +291,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "placement",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["admin", "client", "all"]
         }
       ],
       "indexes": []

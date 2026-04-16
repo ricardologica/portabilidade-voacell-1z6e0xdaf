@@ -19,12 +19,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { WidgetSetting } from '@/types'
 
-const defaultWidget = {
+const defaultWidget: Partial<WidgetSetting> = {
   name: '',
   agent_id: '',
   schema: '',
   type: 'thunderemotionlite',
   is_active: true,
+  placement: 'all',
 }
 
 export default function WidgetAdmin() {
@@ -112,7 +113,7 @@ export default function WidgetAdmin() {
           <CardTitle>Atendimento Inteligente</CardTitle>
           <CardDescription>Gerencie as configurações dos widgets de atendimento.</CardDescription>
         </div>
-        <Button onClick={() => handleOpen()} disabled={widgets.length >= 2}>
+        <Button onClick={() => handleOpen()} disabled={widgets.length >= 5}>
           <Plus className="w-4 h-4 mr-2" /> Novo Widget
         </Button>
       </CardHeader>
@@ -123,6 +124,7 @@ export default function WidgetAdmin() {
               <TableHead>Nome</TableHead>
               <TableHead>Agent ID</TableHead>
               <TableHead>Schema</TableHead>
+              <TableHead>Local</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -133,6 +135,9 @@ export default function WidgetAdmin() {
                 <TableCell className="font-medium">{w.name}</TableCell>
                 <TableCell className="font-mono text-xs">{w.agent_id}</TableCell>
                 <TableCell className="font-mono text-xs">{w.schema}</TableCell>
+                <TableCell className="capitalize">
+                  {w.placement === 'all' ? 'Todos' : w.placement}
+                </TableCell>
                 <TableCell>
                   <Switch
                     checked={w.is_active}
@@ -208,6 +213,18 @@ export default function WidgetAdmin() {
                 placeholder="thunderemotionlite"
                 className="font-mono text-sm"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Exibição (Placement)</Label>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.placement || 'all'}
+                onChange={(e) => setFormData({ ...formData, placement: e.target.value as any })}
+              >
+                <option value="all">Todos</option>
+                <option value="client">Área do Cliente</option>
+                <option value="admin">Área Admin</option>
+              </select>
             </div>
             <div className="flex items-center space-x-2 pt-2">
               <Switch

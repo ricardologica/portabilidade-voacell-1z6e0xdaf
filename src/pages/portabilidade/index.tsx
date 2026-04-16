@@ -22,6 +22,10 @@ export interface PortabilityFormData {
   numbers: string
   titular_name: string
   titular_document: string
+  holder_name?: string
+  tax_id?: string
+  total_amount?: number
+  phone_lines?: string
   document_file: File | null
   video_auth_file: File | null
   invoice_up_to_date: boolean
@@ -76,6 +80,10 @@ export default function PortabilidadePage() {
       data.append('numbers', formData.numbers)
       data.append('titular_name', formData.titular_name)
       data.append('titular_document', formData.titular_document)
+      data.append('holder_name', formData.holder_name || formData.titular_name)
+      data.append('tax_id', formData.tax_id || formData.titular_document)
+      if (formData.total_amount) data.append('total_amount', formData.total_amount.toString())
+      data.append('phone_lines', formData.phone_lines || formData.numbers)
       data.append('status', 'pending')
 
       if (formData.invoice_file) data.append('invoice_file', formData.invoice_file)

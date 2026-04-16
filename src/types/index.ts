@@ -47,6 +47,7 @@ export interface WidgetSetting {
   schema: string
   type: string
   is_active: boolean
+  placement?: 'admin' | 'client' | 'all'
 }
 
 declare global {
